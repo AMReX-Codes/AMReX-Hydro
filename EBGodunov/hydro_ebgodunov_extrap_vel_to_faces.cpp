@@ -9,7 +9,6 @@
 #include <hydro_godunov_plm.H>
 #include <hydro_ebgodunov.H>
 #include <hydro_godunov.H>
-#include <hydro_godunov_K.H>
 #include <hydro_bcs_K.H>
 
 using namespace amrex;
@@ -261,7 +260,7 @@ EBGodunov::ComputeAdvectiveVel ( AMREX_D_DECL(Box const& xbx,
             Real hi = Imx(i  ,j,k,n);
 
             auto bc = pbc[n];
-            GodunovTransBC::SetTransTermXBCs(i, j, k, n, vel, lo, hi, bc.lo(0), bc.hi(0), dlo.x, dhi.x, true);
+            HydroBC::SetXEdgeBCs(i, j, k, n, vel, lo, hi, bc.lo(0), dlo.x, bc.hi(0), dhi.x, true);
 
             Real st = ( (lo+hi) >= 0.) ? lo : hi;
             bool ltm = ( (lo <= 0. && hi >= 0.) || (amrex::Math::abs(lo+hi) < small_vel) );
@@ -281,7 +280,7 @@ EBGodunov::ComputeAdvectiveVel ( AMREX_D_DECL(Box const& xbx,
             Real hi = Imy(i,j  ,k,n);
 
             auto bc = pbc[n];
-            GodunovTransBC::SetTransTermYBCs(i, j, k, n, vel, lo, hi, bc.lo(1), bc.hi(1), dlo.y, dhi.y, true);
+            HydroBC::SetYEdgeBCs(i, j, k, n, vel, lo, hi, bc.lo(1), dlo.y, bc.hi(1), dhi.y, true);
 
             Real st = ( (lo+hi) >= 0.) ? lo : hi;
             bool ltm = ( (lo <= 0. && hi >= 0.) || (amrex::Math::abs(lo+hi) < small_vel) );
@@ -302,7 +301,7 @@ EBGodunov::ComputeAdvectiveVel ( AMREX_D_DECL(Box const& xbx,
             Real hi = Imz(i,j,k  ,n);
 
             auto bc = pbc[n];
-            GodunovTransBC::SetTransTermZBCs(i, j, k, n, vel, lo, hi, bc.lo(2), bc.hi(2), dlo.z, dhi.z, true);
+            HydroBC::SetZEdgeBCs(i, j, k, n, vel, lo, hi, bc.lo(2), dlo.z, bc.hi(2), dhi.z, true);
 
             Real st = ( (lo+hi) >= 0.) ? lo : hi;
             bool ltm = ( (lo <= 0. && hi >= 0.) || (amrex::Math::abs(lo+hi) < small_vel) );

@@ -52,7 +52,7 @@ void SetXEdgeBCs( const int i, const int j, const int k, const int n,
 
     using namespace amrex;
 
-    if (i == domlo)
+    if ( i == domlo )
     {
         if (bclo == BCType::ext_dir)
         {
@@ -87,6 +87,13 @@ void SetXEdgeBCs( const int i, const int j, const int k, const int n,
             lo = 0.;
             hi = lo;
         }
+    }
+    else if ( i < domlo || i > domhi+1 )
+    {
+	// Print()<<i<<", "<<domlo<<", "<<domhi<<std::endl;
+	// amrex::Abort("HydroBC::SetXEdgeBCs : x exceeding one grow cell");
+            lo = 1.2345e10;
+            hi = lo;	
     }
     else
         return;
@@ -146,6 +153,13 @@ void SetYEdgeBCs ( const int i, const int j, const int k, const int n,
             lo = 0.;
             hi = lo;
         }
+    }
+    else if ( j < domlo || j > domhi+1 )
+    {
+        // reflect_odd and reflect_even only work for 1 ghost cell
+        // amrex::Abort("HydroBC::SetYEdgeBCs : y exceeding one grow cell");
+            lo = 1.2345e10;
+            hi = lo;	
     }
     else
         return;
@@ -210,6 +224,13 @@ void SetZEdgeBCs ( const int i, const int j, const int k, const int n,
             lo = 0.;
             hi = lo;
         }
+    }
+    else if ( k < domlo || k > domhi+1 )
+    {
+        // reflect_odd and reflect_even only work for 1 ghost cell
+//        amrex::Abort("HydroBC::SetZEdgeBCs : z exceeding one grow cell");
+            lo = 1.2345e10;
+            hi = lo;	
     }
     else
         return;
