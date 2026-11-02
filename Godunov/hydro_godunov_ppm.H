@@ -921,12 +921,29 @@ void PredictStateOnXFace ( const int i, const int j, const int k, const int n,
 
     if (vel_edge(i+1,j,k) > small_vel) {
         Ip = sp - (half*sigmap)*((sp - sm) - (one -two3rds*sigmap)*s6);
+    } else if (i == domhi && bc.hi(0) == amrex::BCType::ext_dir) {
+        // Unless the flow leaves through it, the state on a boundary with a Dirichlet value
+        // is that value, which the ghost cell holds. Where |u| < small_vel, as on a wall, the
+        // edge-state kernels average the states from the two sides of the face, so the cell
+        // average here would put the state on the wall O(dx) off. Fluxes do not see that,
+        // since u = 0 there, but the convective form adds q div(u) with q the mean of the
+        // states on the faces of the cell (HydroUtils::ComputeConvectiveTerm), which would
+        // then be O(dx) wrong wherever div(u) != 0 next to the wall.
+        // PredictVelOn{X,Y,Z}Face does not need this: the velocity extrapolation has no
+        // q div(u) term, and its transverse terms multiply the state on a wall by the normal
+        // velocity of the cell next to it, which is O(dx), so there the cell average only
+        // adds an O(dt dx) error. That is within the accuracy of the method itself: the PPM
+        // predicted states are second order, with O(dx^2), O(dt dx) and O(dt^2) errors of
+        // their own.
+        Ip = S(i+1,j,k,n);
     } else {
         Ip = S(i,j,k,n);
     }
 
     if(vel_edge(i,j,k) < -small_vel) {
         Im = sm + (half*sigmam)*((sp-sm) + (one - two3rds*sigmam)*s6);
+    } else if (i == domlo && bc.lo(0) == amrex::BCType::ext_dir) {
+        Im = S(i-1,j,k,n);
     } else {
         Im = S(i,j,k,n);
     }
@@ -979,12 +996,18 @@ void PredictStateOnXFace<PPM::minmod> ( const int i, const int j, const int k, c
 
     if (vel_edge(i + 1, j, k) > small_vel) {
         Ip = s0 + half * (one - sigmap) * dsp;
+    } else if (i == domhi && bc.hi(0) == amrex::BCType::ext_dir) {
+        // Unless the flow leaves through it, the state on a boundary with a Dirichlet value
+        // is that value, which the ghost cell holds (see PredictStateOnXFace)
+        Ip = S(i+1,j,k,n);
     } else {
         Ip = S(i,j,k,n);
     }
 
     if (vel_edge(i, j, k) < -small_vel) {
         Im = s0 - half * (one - sigmam) * dsm;
+    } else if (i == domlo && bc.lo(0) == amrex::BCType::ext_dir) {
+        Im = S(i-1,j,k,n);
     } else {
         Im = S(i,j,k,n);
     }
@@ -1038,12 +1061,18 @@ void PredictStateOnYFace ( const int i, const int j, const int k, const int n,
 
     if (vel_edge(i,j+1,k) > small_vel) {
         Ip = sp - (half*sigmap)*((sp - sm) - (one -two3rds*sigmap)*s6);
+    } else if (j == domhi && bc.hi(1) == amrex::BCType::ext_dir) {
+        // Unless the flow leaves through it, the state on a boundary with a Dirichlet value
+        // is that value, which the ghost cell holds (see PredictStateOnXFace)
+        Ip = S(i,j+1,k,n);
     } else {
         Ip = S(i,j,k,n);
     }
 
     if (vel_edge(i,j,k) < -small_vel) {
         Im = sm + (half*sigmam)*((sp-sm) + (one - two3rds*sigmam)*s6);
+    } else if (j == domlo && bc.lo(1) == amrex::BCType::ext_dir) {
+        Im = S(i,j-1,k,n);
     } else {
         Im = S(i,j,k,n);
     }
@@ -1097,11 +1126,17 @@ void PredictStateOnYFace<PPM::minmod> ( const int i, const int j, const int k, c
 
     if (vel_edge(i,j+1,k) > small_vel) {
         Ip = s0 + half * (one - sigmap) * dsp;
+    } else if (j == domhi && bc.hi(1) == amrex::BCType::ext_dir) {
+        // Unless the flow leaves through it, the state on a boundary with a Dirichlet value
+        // is that value, which the ghost cell holds (see PredictStateOnXFace)
+        Ip = S(i,j+1,k,n);
     } else {
         Ip = S(i,j,k,n);
     }
     if (vel_edge(i,j,k) < -small_vel) {
         Im = s0 - half * (one - sigmam) * dsm;
+    } else if (j == domlo && bc.lo(1) == amrex::BCType::ext_dir) {
+        Im = S(i,j-1,k,n);
     } else {
         Im = S(i,j,k,n);
     }
@@ -1156,12 +1191,18 @@ void PredictStateOnZFace ( const int i, const int j, const int k, const int n,
 
     if(vel_edge(i,j,k+1) > small_vel) {
         Ip = sp - (half*sigmap)*((sp-sm) - (amrex::Real(1.0) -two3rds*sigmap)*s6);
+    } else if (k == domhi && bc.hi(2) == amrex::BCType::ext_dir) {
+        // Unless the flow leaves through it, the state on a boundary with a Dirichlet value
+        // is that value, which the ghost cell holds (see PredictStateOnXFace)
+        Ip = S(i,j,k+1,n);
     } else {
         Ip = S(i,j,k,n);
     }
 
     if(vel_edge(i,j,k) < -small_vel) {
         Im = sm + (half*sigmam)*((sp-sm) + (amrex::Real(1.0) - two3rds*sigmam)*s6);
+    } else if (k == domlo && bc.lo(2) == amrex::BCType::ext_dir) {
+        Im = S(i,j,k-1,n);
     } else {
         Im = S(i,j,k,n);
     }
@@ -1213,12 +1254,18 @@ void PredictStateOnZFace<PPM::minmod> ( const int i, const int j, const int k, c
 
     if (vel_edge(i, j, k + 1) > small_vel) {
         Ip = s0 + half * (one - sigmap) * dsp;
+    } else if (k == domhi && bc.hi(2) == amrex::BCType::ext_dir) {
+        // Unless the flow leaves through it, the state on a boundary with a Dirichlet value
+        // is that value, which the ghost cell holds (see PredictStateOnXFace)
+        Ip = S(i,j,k+1,n);
     } else {
         Ip = S(i,j,k,n);
     }
 
     if (vel_edge(i, j, k) < -small_vel) {
         Im = s0 - half * (one - sigmam) * dsm;
+    } else if (k == domlo && bc.lo(2) == amrex::BCType::ext_dir) {
+        Im = S(i,j,k-1,n);
     } else {
         Im = S(i,j,k,n);
     }
