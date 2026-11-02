@@ -80,6 +80,48 @@ Godunov_minmod_bc_hi (const int n,
     }
 }
 
+// Where Godunov_minmod_bc_lo/hi apply, the ghost cell holds the value on the domain face,
+// half a cell from the center of the cell next to it.  Extrapolate that value linearly to
+// the center of the ghost cell, so that minmod_fn and Godunov_minmod_bc_lo/hi take their
+// differences over a whole cell.
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+amrex::Real
+Godunov_minmod_ghost_lo (const int n,
+                         const amrex::Real sm1,
+                         const amrex::Real s0,
+                         const amrex::Real vel_edge,
+                         const int bclo,
+                         const int domlo)
+{
+    if (n == domlo) {
+        if ( bclo == amrex::BCType::ext_dir || bclo == amrex::BCType::hoextrap ||
+            (bclo == amrex::BCType::direction_dependent && vel_edge >= amrex::Real(0.0)) )
+        {
+            return amrex::Real(2.0)*sm1 - s0;
+        }
+    }
+    return sm1;
+}
+
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+amrex::Real
+Godunov_minmod_ghost_hi (const int n,
+                         const amrex::Real s0,
+                         const amrex::Real sp1,
+                         const amrex::Real vel_edge,
+                         const int bchi,
+                         const int domhi)
+{
+    if (n == domhi) {
+        if ( bchi == amrex::BCType::ext_dir || bchi == amrex::BCType::hoextrap ||
+            (bchi == amrex::BCType::direction_dependent && vel_edge <= amrex::Real(0.0)) )
+        {
+            return amrex::Real(2.0)*sp1 - s0;
+        }
+    }
+    return sp1;
+}
+
 namespace PPM {
 
 enum limiters {VanLeer, WENOZ, WENO_JS, NoLimiter, UPWIND, MINMOD};
@@ -978,9 +1020,9 @@ void PredictStateOnXFace<PPM::minmod> ( const int i, const int j, const int k, c
                            const PPM::minmod& /*limiter*/,
                            int /*unused*/)
 {
-    const amrex::Real sm1 = S(i-1,j,k,n);
     const amrex::Real s0  = S(i  ,j,k,n);
-    const amrex::Real sp1 = S(i+1,j,k,n);
+    const amrex::Real sm1 = Godunov_minmod_ghost_lo(i, S(i-1,j,k,n), s0, vel_edge(i  ,j,k), bc.lo(0), domlo);
+    const amrex::Real sp1 = Godunov_minmod_ghost_hi(i, s0, S(i+1,j,k,n), vel_edge(i+1,j,k), bc.hi(0), domhi);
 
     constexpr auto half{amrex::Real(0.5)};
     constexpr auto  one{amrex::Real(1.0)};
@@ -1108,9 +1150,9 @@ void PredictStateOnYFace<PPM::minmod> ( const int i, const int j, const int k, c
                            const PPM::minmod& /*limiter*/,
                            int /*unused*/)
 {
-    const amrex::Real sm1 = S(i,j-1,k,n);
     const amrex::Real s0  = S(i,j  ,k,n);
-    const amrex::Real sp1 = S(i,j+1,k,n);
+    const amrex::Real sm1 = Godunov_minmod_ghost_lo(j, S(i,j-1,k,n), s0, vel_edge(i,j  ,k), bc.lo(1), domlo);
+    const amrex::Real sp1 = Godunov_minmod_ghost_hi(j, s0, S(i,j+1,k,n), vel_edge(i,j+1,k), bc.hi(1), domhi);
 
     constexpr auto half{amrex::Real(0.5)};
     constexpr auto  one{amrex::Real(1.0)};
@@ -1236,9 +1278,9 @@ void PredictStateOnZFace<PPM::minmod> ( const int i, const int j, const int k, c
                            const PPM::minmod& /*limiter*/,
                            int /*unused*/)
 {
-    const amrex::Real sm1 = S(i,j,k-1,n);
     const amrex::Real s0  = S(i,j,k  ,n);
-    const amrex::Real sp1 = S(i,j,k+1,n);
+    const amrex::Real sm1 = Godunov_minmod_ghost_lo(k, S(i,j,k-1,n), s0, vel_edge(i,j,k  ), bc.lo(2), domlo);
+    const amrex::Real sp1 = Godunov_minmod_ghost_hi(k, s0, S(i,j,k+1,n), vel_edge(i,j,k+1), bc.hi(2), domhi);
 
     constexpr auto half{amrex::Real(0.5)};
     constexpr auto  one{amrex::Real(1.0)};
